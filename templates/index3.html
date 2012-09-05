@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://testheatmap.vacau.com/ -->
+<html lang="en">
+<head>
+	<!--<script type="text/javascript" src="{{ url_for('static', filename='heatmap.js')}}"></script>-->
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.Jcrop.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='heatmap.js')}}"></script>
+	<!--<script type="text/javascript" src="{{ url_for('static', filename='heatcanvas-worker.js')}}"></script>-->
+
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Product Heatmap Visualization</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+			#main {
+				width:560px;
+				height:619px;
+				background-repeat: no-repeat;
+				display:none;
+				background-image:url({{ url_for('static', filename='aisle3.jpg')}});				
+				opacity:0.80;
+				-moz-opacity:0.80;
+				filter:alpha(opacity=80);
+				z-index: 1;
+			}
+
+	</style>
+
+</head>
+	<body>
+		<img id="pix_main" src="{{ url_for('static', filename='aisle3.jpg')}}" />
+		<div id="main"></div>
+	</body>
+<script type="text/javascript">
+	var radius = 18;
+	var r_divisible = 1.3;
+
+	function isPositiveInteger(val) {
+	    return val == "0" || ((val|0) > 0 && val % 1 == 0);
+	};
+
+	;(function ( $, window, undefined ) {
+		var pluginName = 'heatMapGenerator',
+			document = window.document,
+			container = '',
+			datapoints = [],
+			max_count = 0,
+			cfg = {},
+			dataset = {};
+		function heatMapGenerator( element, options ) {
+			this.element = element;
+			this.setDataPoints = function(x_axis, y_axis, total) {
+				if (total > max_count) {
+					max_count = total;
+				}
+				datapoints.push({x: x_axis, y: y_axis, count: total});
+			};
+			this.generateHeatMap = function() {
+				for (var k in datapoints) {
+					if (datapoints[k].count > max_count) {
+						max_count = datapoints[k].count;	
+					}
+				}
+				dataset = {
+					max: max_count,
+					data: datapoints
+				};
+
+				//cfg.gradient =  {0.45: "rgb(0,0,255)", 0.55: "rgb(0,255,255)", 0.65: "rgb(0,255,0)", 0.95: "yellow", 1.0: "rgb(255,0,0)"};
+				cfg.gradient = {
+					0.10: "rgb(72,61,139)",
+					0.20: "rgb(0,0,255)",
+					//0.30: "rgb(0,206,209)",
+					0.30: "rgb(0,255,255)",
+					0.40: "rgb(49, 163, 84)",
+					0.50: "rgb(255,255,224)",
+					0.60: "rgb(255,255,0)",
+					0.70: "rgb(254,178,76)",
+					0.80: "rgb(255,165,0)",
+					0.90: "rgb(240, 59, 32)",
+					1.0: "rgb(189, 0, 38)"
+				}
+				cfg.visible = true;
+				cfg.radius = radius;
+				cfg.opacity = 70;
+				
+				cfg.element = document.getElementById("main");
+				var heatmap_obj = window.h337.create(cfg);
+				heatmap_obj.store.setDataSet(dataset);
+			};
+			this.init();
+		};
+		heatMapGenerator.prototype.init = function () {};
+		$.fn[pluginName] = function ( options ) {
+			return this.each(function () {
+				if (!$.data(this, 'plugin_' + pluginName)) {
+					var elem = $(this);   
+					$.data(this, 'plugin_' + pluginName, new heatMapGenerator( this, options ));
+				}
+			});
+		};
+	}($, window));	
+	function getRandomInt(min, max) {
+		//http://roshanbh.com.np/2008/09/get-random-number-range-two-numbers-javascript.html
+		var randVal = min+(Math.random()*(max-min));
+  		return typeof floatVal=='undefined'?Math.round(randVal):randVal.toFixed(0);		
+	};
+	var datapoints = [];
+	$('#pix_main').Jcrop({
+		onSelect: function(c) {
+			// adjust the starting point 
+			var x1 = parseInt(c.x + (radius/(r_divisible+0.5)), 10);
+			var x2 = parseInt(c.x2 - (radius/(r_divisible+0.7)), 10);
+			var y1 = parseInt(c.y + (radius/(r_divisible+0.5)), 10);
+			var y2 = parseInt(c.y2 - (radius/(r_divisible+0.7)), 10);
+
+			var total_count = parseInt(prompt('Total count of this product : ', 'Enter 1 - 1000000'));
+			//selection too thin
+			if ( ((x2 - x1) < radius && (y2 - y1) < radius)
+					&& isPositiveInteger(total_count) 
+					&& total_count >= 1 
+					&& total_count <= 10000000 
+			) {
+				//console.log((x2 - x1) +' '+ radius +' || '+ (y2 - y1) +' '+ radius);
+				//console.log(c);
+				//console.log(x2 + " x2 " + x1 + " x " + y2 + " y2 " + y1 + " y ");
+				var center_x = parseInt( (x2 + x1) / 2 , 10 );
+				var center_y = parseInt( (y2 + y1) / 2 , 10 );
+				datapoints.push({x: center_x, y: center_y, c: total_count});	
+				this.release();
+				var rendercanvas = prompt("Render heatmap (<b>y<b> Yes or <b>n<b> No) : ", "");
+				if (rendercanvas == 'y') {
+					this.destroy();
+					$('#pix_main').remove();
+					$('#main').show()
+							.css({'position': 'absolute', 'top': '10px', left: '10px'});
+
+					$('#main').heatMapGenerator();
+					var heatMapGenerator_obj = $('#main').data('plugin_heatMapGenerator');
+
+					for (var i=0; i<datapoints.length; i++) {
+						//heatmap.push();	
+						heatMapGenerator_obj.setDataPoints(datapoints[i].x, datapoints[i].y, datapoints[i].c);
+					}
+					heatMapGenerator_obj.generateHeatMap();
+					//console.log(c);
+				}
+				return false;
+			}
+			// reached max
+			if ( !(total_count !== null 
+					&& isPositiveInteger(total_count) 
+					&& total_count >= 1 
+					&& total_count <= 10000000 
+					&& ((x2 - x1) > radius || (y2 - y1) > radius))
+			) {
+				this.release();
+				if ((x2 - x1) > radius && (y2 - y1) > radius) {
+					alert('Selection too small!');
+				} else {
+					alert('Allowed value from 1 - 1000000');	
+				}
+				return false;
+			}
+
+			function randomisePoint(x, radius, max) {
+				//console.log('randomisepoint '+x+' '+radius+' '+max);
+				if (max < parseInt(x + radius)) {
+					//console.log('max rad against max');
+					var randomx = getRandomInt(parseInt(x+1, 10), parseInt(x + radius, 10));
+					//console.log('randomx ****'+randomx);
+					return  parseInt(randomx, 10);
+				}
+				console.log( 'skip max rad ***'+ parseInt(max - radius, 10)  +' ---- '+ parseInt(x + radius +1, 10));
+				if (parseInt(x + radius +1, 10) > parseInt(max - radius, 10)) {
+					var randomx = getRandomInt(parseInt(max - radius, 10), parseInt(x + radius, 10));
+				} else {
+					var randomx = getRandomInt(parseInt(x + radius +1, 10), parseInt(max - radius, 10));
+				}
+				return parseInt(x + randomx + radius);
+			};			
+			if ((x2 - x1 - (radius/r_divisible)) > radius) {
+				var startx = randomisePoint(parseInt(x1 + (radius/r_divisible), 10), radius, parseInt(x1 + (radius/r_divisible) , 10));
+			//	console.log('randomise xxx '+startx);
+			} else {
+				var startx = randomisePoint(parseInt(x1 + (radius/r_divisible), 10), radius, parseInt(x2 - (radius/r_divisible) , 10));
+			//	console.log('divide xx '+startx);
+			}
+			//console.log('is first randomise xx ok' + parseInt(startx) +'<'+ parseInt(x2 - radius, 10));
+			
+			if (parseInt(startx) < parseInt(x2 - radius, 10)) {
+			//	console.log('recompute startx '+parseInt(startx) +' '+ parseInt(x2 - radius, 10));
+				if ( (x2 - x1 - (radius/r_divisible)) < radius ) {
+					var startx = randomisePoint(parseInt(x1, 10), radius, parseInt(x2 - radius , 10));
+				} else {
+					var startx = randomisePoint(parseInt(x1, 10), radius, parseInt(x1 + (radius/r_divisible) , 10));
+				}
+			//	console.log('new startx '+startx);
+			}
+			
+			if ((y2 - y1 - (radius/r_divisible)) > radius) {
+				var starty = randomisePoint(parseInt(y1 + (radius/r_divisible), 10), radius, parseInt(y1 + (radius/r_divisible) , 10));
+				//console.log('randomise yyy '+starty);
+			} else {
+				var starty = randomisePoint(parseInt(y1 + (radius/r_divisible), 10), radius, parseInt(y2 - (radius/r_divisible) , 10));
+			}
+			//console.log('is first randomise xx ok' + parseInt(startx) +'<'+ parseInt(x2 - radius, 10));
+			if (parseInt(starty) < parseInt(y2 - radius, 10)) {
+			//	console.log('recompute starty '+parseInt(starty) +' '+ parseInt(y2 - radius, 10));
+				if ( (y2 - y1 - (radius/r_divisible)) < radius ) {
+					var starty = randomisePoint(parseInt(y1, 10), radius, parseInt(y2 - radius , 10));
+				} else {
+					var starty = randomisePoint(parseInt(y1, 10), radius, parseInt(y1 + (radius/r_divisible) , 10));
+				}
+			//	console.log('new starty '+starty);
+			}
+
+			//console.log('start '+x1+' x1 '+y1+'y1 == '+startx+','+starty);	
+			//console.log(parseInt(startx) +' x againts < '+ (x2 - radius));
+			//console.log(parseInt(starty) +' y againts < '+ (y2 - radius));	
+
+			if ( (x2 - x1) < (y2 - y1) ) {
+				var flip_xy = 1;
+				var outer_start_2 = y2;
+				var outer_start_1 = y1;
+				var inner_start_2 = x2;
+				var inner_start_1 = x1;
+				var inner_rand = startx;
+				var outer_rand = starty;			
+			} else {
+				var flip_xy = 0;
+				var outer_start_2 = x2;
+				var outer_start_1 = x1;
+				var inner_start_2 = y2;
+				var inner_start_1 = y1;
+				var inner_rand = starty;
+				var outer_rand = startx;				
+			}
+			var last_outer = 0;
+			while (parseInt(outer_rand) < parseInt(outer_start_2 - radius, 10)) {		
+				var render_x = 0
+				var last_inner = 0;
+				
+				while (parseInt(inner_rand) < parseInt(inner_start_2 - radius, 10)) {
+					console.log('lastinner >>>'+last_inner);
+					if (last_inner == 0) {
+						var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(radius + (radius/2), 10));
+						last_inner = inner_rand;	
+						var show_inner = 1;
+					} else {
+						 if (parseInt(inner_rand + radius) < inner_start_2) {
+							// prevent rendering of point within the current radius
+							var show_inner = 1;
+						} else {
+							var show_inner = 0;
+						}
+					}
+					if (show_inner == 1) {
+						console.log('push inner' +inner_rand+','+outer_rand);
+						if (flip_xy === 1) {
+							datapoints.push({x: inner_rand, y: outer_rand, c: total_count});
+						} else {
+							datapoints.push({x: outer_rand, y: inner_rand, c: total_count});
+						}
+						render_x = 1;
+						last_inner = inner_rand;
+					}
+					if (parseInt(inner_rand) < parseInt(inner_start_2 - radius, 10)) {
+						if ( (inner_start_2 - inner_rand) < radius ) {
+							var inner_rand = randomisePoint(parseInt(inner_rand + (radius/1.2), 10), radius, parseInt(inner_start_2 - radius , 10)) + 5;
+						} else {
+							var inner_rand = randomisePoint(parseInt(inner_rand + (radius/1.2), 10), radius, parseInt(inner_rand + radius , 10)) + 5;
+						}
+					}
+					console.log('check last inner ^^^^ '+last_inner+' '+inner_rand);
+					if ( (inner_rand - last_inner) < radius ) {
+						inner_rand = last_inner + radius;
+						console.log('check last inner ***** '+last_inner+' '+inner_rand);
+					}
+				}
+				if (outer_rand === undefined || isNaN(outer_rand)) {
+					break;
+				}				
+				if (parseInt(inner_rand + (radius/1.2)) < parseInt(inner_start_2 - radius, 10)) {
+					if ( (inner_start_2 - inner_rand) < radius ) {
+						var inner_rand = randomisePoint(parseInt(inner_rand + (radius/1.2), 10), radius, parseInt(inner_start_2 - radius , 10)) + 5;
+					} else {
+						var inner_rand = randomisePoint(parseInt(inner_rand + (radius/1.2), 10), radius, parseInt(inner_rand + radius , 10)) + 5;
+					}
+				}
+				console.log('check last inner ^^^^ '+last_inner+' '+inner_rand);
+				if ( (inner_rand - last_inner) < radius ) {
+					inner_rand = last_inner + radius;
+					console.log('check last inner ***** '+last_inner+' '+inner_rand);
+				}
+				if (render_x == 0) {
+					if (last_outer == 0) {
+						last_outer = outer_rand;	
+						var show_outer = 1;
+					} else {
+						 if (parseInt(outer_rand - last_outer) >= radius) {
+							// prevent rendering of point within the current radius
+							var show_outer = 1;
+						} else {
+							var show_outer = 0;
+						}
+					}
+					if (show_outer == 1) {
+						console.log('push outer' +inner_rand+','+outer_rand);
+						if (flip_xy === 1) {
+							datapoints.push({x: inner_rand, y: outer_rand, c: total_count});;
+						} else {
+							datapoints.push({x: outer_rand, y: inner_rand, c: total_count});
+						}
+						console.log('change last outer '+last_outer);
+						console.log('check last outer 11 '+last_outer+' '+outer_rand+' outer_start_2 '+outer_start_2);
+						if (parseInt(outer_rand + (radius/1.2)) < parseInt(outer_start_2 - radius, 10)) {
+							if ( (outer_start_2 - outer_rand) < radius ) {
+								console.log('firstcond');
+								var outer_rand = randomisePoint(parseInt(outer_rand + (radius/1.2), 10), radius, parseInt(outer_start_2 - radius , 10)) + 5;
+							} else {
+								console.log('seccond ' + outer_rand);
+								var outer_rand = randomisePoint(parseInt(outer_rand + (radius/1.2), 10), radius, parseInt(outer_rand + radius , 10)) + 5;
+								console.log('2nd '+outer_rand);
+							}
+						}
+						console.log('check last outer 22 '+last_outer+' '+outer_rand);
+						if ( (outer_rand - last_outer) < radius  ) {
+							outer_rand = last_outer + radius;
+							console.log('check last outer 33 '+last_outer+' '+outer_rand);
+						}						
+						last_outer = outer_rand;
+						console.log('change last outer '+last_outer);
+					}
+					if (parseInt(inner_rand + (radius/1.2)) <= parseInt(inner_start_2 - radius, 10)) {
+						var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - (radius/1.2) , 10));
+					} else {
+						console.log('change inner 1 '+inner_start_1 +' *** '+inner_rand);
+						if ((inner_start_2 - inner_start_1 - (radius/1.2)) > radius) {
+							var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_1 + (radius/1.2) , 10)) + 5;
+						} else {
+							var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - (radius/1.2) , 10)) + 5;
+						}
+						if (parseInt(inner_rand) < parseInt(inner_start_2 - radius, 10)) {
+							if ( (inner_start_2 - inner_start_1 - (radius/1.2)) < radius ) {
+								var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - radius , 10)) + 5;
+							} else {
+								var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_1 + (radius/1.2) , 10)) + 5;
+							}
+						}
+					}					
+				}
+
+				console.log(' outer rand ' + outer_rand +' '+ (outer_rand + radius) + ' < ' +outer_start_2);
+				if ((outer_rand + radius) < outer_start_2) {
+					console.log('push outer lastttt >>> ' +inner_rand+','+outer_rand);
+					if (flip_xy === 1) {
+						datapoints.push({x: inner_rand, y: outer_rand, c: total_count});
+					} else {
+						datapoints.push({x: outer_rand, y: inner_rand, c: total_count});
+					}
+						
+					if ( (outer_start_2 - outer_rand) < radius ) {
+						console.log('firstcond');
+						var outer_rand = randomisePoint(parseInt(outer_rand + (radius/1.2), 10), radius, parseInt(outer_start_2 - radius , 10)) + 5;
+					} else {
+						console.log('seccond ' + outer_rand);
+						var outer_rand = randomisePoint(parseInt(outer_rand + (radius/1.2), 10), radius, parseInt(outer_rand + radius , 10)) + 5;
+						console.log('2nd '+outer_rand);
+					}
+
+					if (parseInt(inner_rand + (radius/1.2)) <= parseInt(inner_start_2 - radius, 10)) {
+						var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - (radius/1.2) , 10));
+					} else {
+						console.log('change inner 1 '+inner_start_1 +' *** '+inner_rand);
+						if ((inner_start_2 - inner_start_1 - (radius/1.2)) > radius) {
+							var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_1 + (radius/1.2) , 10)) + 5;
+						} else {
+							var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - (radius/1.2) , 10)) + 5;
+						}
+						if (parseInt(inner_rand) < parseInt(inner_start_2 - radius, 10)) {
+							if ( (inner_start_2 - inner_start_1 - (radius/1.2)) < radius ) {
+								var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_2 - radius , 10)) + 5;
+							} else {
+								var inner_rand = randomisePoint(parseInt(inner_start_1, 10), radius, parseInt(inner_start_1 + (radius/1.2) , 10)) + 5;
+							}
+						}
+					}					
+				}
+				//console.log(parseInt(outer_rand) +' < '+ parseInt(outer_start_2 - radius, 10) + 'outer_start_2 ' +outer_start_2);
+				//console.log('outer_start_2 ' +outer_start_2);
+			}
+			if (typeof render_x == 'undefined') {
+				console.log('center render');
+				var center_x = parseInt( (x2 + x1) / 2.2 , 10 );
+				var center_y = parseInt( (y2 + y1) / 2.2 , 10 );
+				datapoints.push({x: center_x, y: center_y, c: total_count});
+			}
+			
+			var rendercanvas = prompt("Render heatmap (<b>y<b> Yes or <b>n<b> No) : ", "");
+			if (rendercanvas == 'y') {
+				this.destroy();
+				$('#pix_main').remove();
+				$('#main').show()
+						.css({'position': 'absolute', 'top': '10px', left: '10px'});
+
+				$('#main').heatMapGenerator();
+				var heatMapGenerator_obj = $('#main').data('plugin_heatMapGenerator');
+
+				for (var i=0; i<datapoints.length; i++) {
+					//heatmap.push();	
+					heatMapGenerator_obj.setDataPoints(datapoints[i].x, datapoints[i].y, datapoints[i].c);
+				}
+				heatMapGenerator_obj.generateHeatMap();
+				console.log(c);
+			} else {
+				this.release();
+			}
+
+		}
+	});
+</script>	
+</html>

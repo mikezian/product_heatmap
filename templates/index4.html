@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!--<script type="text/javascript" src="{{ url_for('static', filename='heatmap.js')}}"></script>-->
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.Jcrop.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='heatmap_latest.js')}}"></script>
+	<!--<script type="text/javascript" src="{{ url_for('static', filename='heatcanvas-worker.js')}}"></script>-->
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css')}}">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Product Heatmap Visualization</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+			#cursorCanvas {
+				width:560px;
+				height:619px;
+				position:"absolute";
+				z-index: 1000002;
+				
+			}
+			#legendCanvas {
+				opacity:0.70;
+				-moz-opacity:0.70;
+				filter:alpha(opacity=70);
+			}
+			#main {
+				width:560px;
+				height:619px;
+				background-repeat: no-repeat;
+				background-image:url({{ url_for('static', filename='aisle3.jpg')}});
+				opacity:0.70;
+				-moz-opacity:0.70;
+				filter:alpha(opacity=70);
+				z-index: 1;
+				cursor: pointer; cursor: hand;
+				//border:1px red solid;
+				float:left;
+				position:relative;
+			}
+			#main_container {
+				width: 900px;
+				padding:20px;
+				position:relative;
+				margin: auto;
+			}
+			#opts {
+				float: right;
+				width: 400px;
+				margin-right:-80px;
+			}
+
+	</style>
+
+</head>
+	<body>
+	<div id="main_container">
+		<h1>Heatmap Generator</h1>
+		<div id="opts">
+			<legend>Heatmap Settings</legend>
+			<form class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" for="inputRadius">Radius</label>
+					<div class="controls">
+						<input type="text" name="radius" id="inputRadius" value='30' placeholder='Heatmap point (e.g. 18 or 19..etc)' /> 
+					</div>
+				</div>
+				<div class="control-group">	
+					<label  class="control-label" for="inputInteractions">Interactions</label>
+					<div class="controls">
+						<input type="text" name="interactions" id="inputInteractions" value='1' placeholder='Number of interactions' />
+					</div>
+				</div>
+				<!--<div class="control-group">
+					<label  class="control-label" for="inputImage">Image</label>
+					<div class="controls">
+						<input type="text" name="image" id="inputImage" value='aisle.jpg' placeholder='Enter the image file under static folder' />
+					</div>
+				</div>-->
+			</form>
+
+		</div>
+		<div id="main">
+			<canvas id="cursorCanvas" width="560" height="619"></canvas>
+		</div>
+		
+	</div>
+	</body>
+<script type="text/javascript">
+	var radius = 30;
+
+	function isPositiveInteger(val) {
+	    return val == "0" || ((val|0) > 0 && val % 1 == 0);
+	};
+
+	;(function ( $, window, undefined ) {
+		var pluginName = 'heatMapGenerator',
+			document = window.document,
+			container = '',
+			datapoints = [],
+			datapoints_radius = {},
+			max_count = 0,
+			cfg = {},
+			dataset = {};
+		function heatMapGenerator( element, options ) {
+			this.element = element;
+			this.setDataPoints = function(x_axis, y_axis, total, radius) {
+				if (parseInt(total) > parseInt(max_count)) {
+					max_count = parseInt(total);
+				}
+				datapoints[x_axis+y_axis] = {x: x_axis, y: y_axis, count: parseInt(total)};
+				datapoints_radius[x_axis+y_axis] = parseInt(radius);
+			};
+			this.generateHeatMap = function() {
+				var points = [];
+				for (var k in datapoints) {
+					if (datapoints[k].count > max_count) {
+						max_count = parseInt(datapoints[k].count);	
+					}
+					points.push(datapoints[k]);
+					// mic add radis per datapoints
+					
+				}
+				dataset = {
+					max: parseInt(max_count),
+					data: points
+				};
+				cfg.gradient = {
+					0.000001: "rgb(0,0,153)",
+					0.10: "rgb(51,0,255)",
+					0.20: "rgb(51,102,255)",
+					0.30: "rgb(51,255,255)",
+					0.40: "rgb(51,255,0)",
+					0.50: "rgb(255,255,0)",
+					0.60: "rgb(255,204,0)",
+					0.70: "rgb(254,153,0)",
+					0.80: "rgb(255,102,0)",
+					0.90: "rgb(255,51,0)",
+					1.0: "rgb(255,0,0)"
+				}
+				cfg.visible = true;
+				// commented this line since the radius is per data points
+				//cfg.radius = radius;
+				cfg.radius = datapoints_radius;
+				cfg.opacity = 80;
+				cfg.legend = {
+					title: "Legend",
+					position: "bottom"
+				}
+				//cfg.debug = true;
+				cfg.element = document.getElementById(this['element'].id);
+				var heatmap_obj = window.h337.create(cfg);
+				heatmap_obj.clear();
+				
+				heatmap_obj.store.setDataSet(dataset);
+			};
+			this.init();
+		};
+		heatMapGenerator.prototype.init = function () {};
+		$.fn[pluginName] = function ( options ) {
+			return this.each(function () {
+				if (!$.data(this, 'plugin_' + pluginName)) {
+					var elem = $(this);   
+					$.data(this, 'plugin_' + pluginName, new heatMapGenerator( this, options ));
+				}
+			});
+		};
+	}($, window));
+	var datapoints = [];
+	var canvas = document.getElementById('cursorCanvas');
+	var ctx = canvas.getContext('2d');
+
+	$('#main').heatMapGenerator();
+		
+	$('#main').bind('mousemove', function(e){
+		var offset = $(this).offset();
+		var x = parseFloat(e.pageX - offset.left);
+		var y = parseFloat(e.pageY - offset.top);
+		
+		ctx.globalCompositeOperation = "source-over";
+  		ctx.clearRect(0, 0, 560, 619);
+		ctx.strokeStyle = '#000';
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.stroke();
+	});
+	$('#inputRadius').bind('change', function(){
+		var _radius = $(this).val();
+		if (isPositiveInteger(_radius)) {
+			radius = $(this).val();
+			//console.log(radius);
+		} else {
+			alert("Radius must be in positive integer");
+		}
+	});
+	$('#main').bind('mouseup', function(e){
+		var _radius = $('#inputRadius').val();
+		var _interactions = $('#inputInteractions').val();
+		if (isPositiveInteger(_radius) && isPositiveInteger(_interactions)) {
+			radius = _radius;
+			var offset = $(this).offset();
+			var x = parseFloat(e.pageX - offset.left);
+			var y = parseFloat(e.pageY - offset.top);
+			console.log($(this).find('canvas').not('#cursorCanvas'));
+			$(this).find('canvas:not("#cursorCanvas")').remove();
+			$(this).find('div').remove()
+			var heatMapGenerator_obj = $(this).data('plugin_heatMapGenerator');
+			heatMapGenerator_obj.setDataPoints(x, y, _interactions, radius);
+			heatMapGenerator_obj.generateHeatMap();
+			
+		} else {
+			var err ='';
+			if (!isPositiveInteger(_radius)) {
+				err += "Radius must be in positive integer\n";
+			}
+			if (!isPositiveInteger(_interactions)) {
+				err += "Interactions must be in positive integer\n";
+			}
+			alert(err);
+		}
+
+		
+	});
+</script>	
+</html>

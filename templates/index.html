@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://testheatmap.vacau.com/ -->
+<html lang="en">
+<head>
+	<!--<script type="text/javascript" src="{{ url_for('static', filename='heatmap.js')}}"></script>-->
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='jquery.Jcrop.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='heatcanvas.js')}}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='heatcanvas-worker.js')}}"></script>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Product Heatmap Visualization</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		body, html {
+			margin:0;
+			padding:0;
+			font-family:Arial;
+		}
+		h1 {
+			margin-bottom:10px;
+		}
+		#main {
+			position:relative;
+			width:800px;
+			padding:20px;
+			margin:auto;
+		}
+		#main_holder {
+			float:left;
+			width:384px;
+			height:497px;
+		}
+		
+		#configArea {
+			position:relative;
+			float:right;
+			width:260px;
+			padding:20px;
+			padding-top:0;
+		}
+		.btn {
+			margin-top:25px;
+			padding:10px 20px 10px 20px;
+			-moz-border-radius:15px;
+			-o-border-radius:15px;
+			-webkit-border-radius:15px;
+			border-radius:15px;
+			border:2px solid black;
+			cursor:pointer;
+			color:white;
+			background-color:black;
+		}
+		h2{
+			margin-top:0;
+		}
+	</style>
+
+</head>
+	<body>
+		<div id="main">
+			<div id="main_holder"><canvas style="background-image:{{ url_for('static', filename='aisle2.jpg')}};" width="400" height="300" id="product_shelf"></canvas>
+			</div>
+			<div id="configArea">
+				<h2>Sidenotes</h2>
+				<p>Click on the product shown on the shelf <strong>once</strong> and enter corresponding total per product.</p>
+				<p>Click <strong>Generate Heatmap</strong> to show heatmap visualization.</p>
+				<ol id="product_list"></ol>
+				
+				<div id="dataset" class="btn">Generate Heatmap</div>
+			</div>
+		</div>
+		<div style="clear:both;padding-top:30px;"></div>
+<script type="text/javascript">
+
+function isPositiveInteger(val) {
+    return val == "0" || ((val|0) > 0 && val % 1 == 0);
+};
+;(function ( $, window, undefined ) {
+	var pluginName = 'heatMapGenerator',
+		document = window.document,
+		container = '',
+		datapoints = [],
+		max_count = 0,
+		dataset = {};
+	function heatMapGenerator( element, options ) {
+		this.element = element;
+		this.setDataPoints = function(x_axis, y_axis, total) {
+			if (total > max_count) {
+				max_count = total;
+			}
+			datapoints.push({x: x_axis, y: y_axis, count: total});
+		};
+		this.generateHeatMap = function() {
+			for (var k in datapoints) {
+				if (datapoints[k].count > max_count) {
+					max_count = datapoints[k].count;	
+				}
+			}
+			dataset = {
+				max: max_count,
+				data: datapoints
+			};
+			var heatmap_obj = window.h337.create({"element":document.getElementById("product_shelf"), "radius":8, "visible":true});
+			heatmap_obj.store.setDataSet(dataset);
+			heatmap.createGradientImage();
+		};
+		this.init();
+	};
+	heatMapGenerator.prototype.init = function () {};
+	$.fn[pluginName] = function ( options ) {
+		return this.each(function () {
+			if (!$.data(this, 'plugin_' + pluginName)) {
+				var elem = $(this);         
+				$.data(this, 'plugin_' + pluginName, new heatMapGenerator( this, options ));
+			}
+		});
+	};
+}($, window));
+
+function showCoords(c) {
+      // variables can be accessed here as
+      // c.x, c.y, c.x2, c.y2, c.w, c.h
+      //console.log(c);
+};
+$(document).ready(function(){
+	//$('#product_shelf').heatMapGenerator();
+	//var heatMapGenerator_obj = $('#product_shelf').data('plugin_heatMapGenerator');
+	
+	//console.log(heatmap);
+	var datapoints = [];
+	var copy = $('#product_shelf');
+	var colorscheme = function(value){
+		    var light = value * 100;
+		    return "hsl(20, 75%, "+light+"%)";
+		};
+	/*$("#product_shelf").bind('click', function(e){
+		
+		if (e.layerX) { // Firefox
+			x = e.layerX;
+			y = e.layerY;
+		} else if (e.offsetX) { // Opera
+			x = e.offsetX;
+			y = e.offsetY;
+		}
+		
+		var offset = $(this).offset();
+		var x = e.pageX - (offset.left);
+		var y = e.pageY - (offset.top);
+
+		//var x = e.pageX - this.offsetLeft;
+		//var y = e.pageY - this.offsetTop;
+		var total_count = prompt("Enter the total count of this product : ", "Enter 1 - 1000000");
+		if (total_count !== null && isPositiveInteger(total_count) && total_count >= 1 && total_count <= 1000000) {
+			heatMapGenerator_obj.setDataPoints(x, y, total_count);
+			var product_name = prompt("Enter the product name : ", "Product XYZ");
+			if (product_name !== null) {
+				$('#product_list').append('<li>'+product_name+': '+total_count+'</li>');
+			} else {
+				$('#product_list').append('<li>[Empty]: '+total_count+'</li>');
+			}
+		} else {
+			alert('Allowed value from 1 - 1000000');
+		}
+	});
+	*/
+	$('#dataset').bind('click', function(){
+		//console.log(jcrop_el);
+		//jcrop_el.destroy();
+		//heatMapGenerator_obj.generateHeatMap();
+		
+		
+		//$('#main_holder').append(copy);
+		var heatmap = new HeatCanvas("product_shelf");
+		//console.log(heatmap);
+		var data = [];
+		datapoints = [
+			{x: 120, y: 30, c: 31},
+			{x: 30, y: 30, c: 131}
+		];
+		for (var i in datapoints) {
+			console.log(datapoints[i].x +"=="+ datapoints[i].y +"=="+ datapoints[i].c);
+			heatmap.push(datapoints[i].x, datapoints[i].y, datapoints[i].c);
+		}
+		console.log(heatmap);
+		heatmap.render(2, null, null);
+	});
+	//	heatmap.add(center_x, center_y, total_count);
+	/*var jcrop_el;
+	$('#product_shelf').Jcrop({
+		onSelect: function (c) {
+			// variables can be accessed here as
+			// c.x, c.y, c.x2, c.y2, c.w, c.h
+			console.log('onselect');
+			console.log(c);
+			var center_x = (c.x + ((c.x2 - c.x)/2));
+			var center_y = (c.x + ((c.y2 - c.y)/2));
+			console.log(center_x);
+			console.log(center_y);
+			var total_count = parseInt(prompt("Enter the total count of this product : ", "Enter 1 - 1000000"));
+			if (total_count !== null && isPositiveInteger(total_count) && total_count >= 1 && total_count <= 1000000) {
+				//heatMapGenerator_obj.setDataPoints(x, y, total_count);
+				datapoints.push({x: center_x, y: center_y, c: total_count});
+				var product_name = prompt("Enter the product name : ", "Product XYZ");
+				if (product_name !== null) {
+					//$('#product_list').append('<li>'+product_name+': '+total_count+'</li>');
+				} else {
+					//$('#product_list').append('<li>[Empty]: '+total_count+'</li>');
+				}
+			} else {
+				alert('Allowed value from 1 - 1000000');
+			}
+			jcrop_el = this;
+			console.log(jcrop_el);
+			this.release();			
+		}
+	});*/
+});
+</script>
+</body>
+</html>
